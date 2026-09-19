@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "clean": "rm -rf dist"
+    "clean": "node ../../scripts/rmrf.cjs dist"
   },
   "dependencies": {
     "@ytview/youtube-utils": "workspace:*",

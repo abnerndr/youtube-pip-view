@@ -9,6 +9,10 @@
     "dev:extension": "turbo dev --filter=@ytview/chrome-extension",
     "build:desktop": "turbo build --filter=@ytview/desktop",
     "build:extension": "turbo build --filter=@ytview/chrome-extension",
+    "pack:desktop": "pnpm --filter @ytview/desktop run electron:build",
+    "pack:desktop:win": "pnpm --filter @ytview/desktop run electron:build:win",
+    "pack:desktop:mac": "pnpm --filter @ytview/desktop run electron:build:mac",
+    "pack:desktop:linux": "pnpm --filter @ytview/desktop run electron:build:linux",
     "clean": "turbo clean",
     "test": "turbo test"
   },

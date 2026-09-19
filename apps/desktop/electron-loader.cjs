@@ -3,6 +3,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 
 // Determine the correct path to main.js
 // In development: dist-electron/main/main.js (from project root)
@@ -22,8 +23,8 @@ if (fs.existsSync(path.join(__dirname, 'main/main.js'))) {
   process.exit(1);
 }
 
-// Import the ES module main process
-import(mainPath)
+// Windows exige file://; um caminho C:\... vira protocolo "c:" no import().
+import(pathToFileURL(mainPath).href)
   .catch(err => {
     console.error('Failed to load main process:', err);
     process.exit(1);

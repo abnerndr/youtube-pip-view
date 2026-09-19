@@ -4,8 +4,7 @@
  */
 
 const isMac = process.platform === 'darwin';
-const mod = isMac ? '⌘' : 'Ctrl';
-const restoreShortcut = `${mod}⇧Y`;
+const restoreShortcut = isMac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
 const traySurface = isMac
   ? 'barra de menu'
   : process.platform === 'win32'

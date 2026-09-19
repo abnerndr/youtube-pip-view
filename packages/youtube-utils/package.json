@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist",
+    "clean": "node ../../scripts/rmrf.cjs dist",
     "test": "tsc && node --test test/"
   },
   "devDependencies": {

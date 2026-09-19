@@ -16,11 +16,11 @@ export function modKey(): string {
 }
 
 export function shortcutRestore(): string {
-  return `${modKey()}⇧Y`;
+  return isMacPlatform() ? "⌘⇧Y" : "Ctrl+Shift+Y";
 }
 
 export function shortcutOpenLink(): string {
-  return `${modKey()}L`;
+  return isMacPlatform() ? "⌘L" : "Ctrl+L";
 }
 
 export function shortcutQuit(): string {

@@ -21,18 +21,20 @@ mac:
     - zip
 dmg:
   title: ${productName}-${version}
+forceCodeSigning: false
 win:
   icon: build/icon.png
   target:
     - nsis
     - portable
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  artifactName: ${productName}-${version}-${arch}-portable.${ext}
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: YTView
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
 linux:
   icon: build/icon.png
   category: AudioVideo
