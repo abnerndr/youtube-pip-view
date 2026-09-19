@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { QueueItem, QueueState } from '../types';
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  platform: process.platform as 'darwin' | 'win32' | 'linux',
   getStoredVideo: () => ipcRenderer.invoke('get-stored-video'),
   saveVideo: (videoId: string) => ipcRenderer.invoke('save-video', videoId),
   saveVideoPosition: (videoId: string, seconds: number) =>
@@ -64,6 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 declare global {
   interface Window {
     electronAPI: {
+      platform: 'darwin' | 'win32' | 'linux';
       getStoredVideo: () => Promise<string | null>;
       saveVideo: (videoId: string) => Promise<void>;
       saveVideoPosition: (videoId: string, seconds: number) => Promise<void>;

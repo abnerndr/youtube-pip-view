@@ -1,5 +1,6 @@
 import { Keyboard, ListOrdered, MousePointerClick } from "lucide-react";
 import { strings } from "../strings";
+import { shortcutOpenLink, shortcutRestore } from "../platform";
 
 interface OnboardingProps {
   onDismiss: () => void;
@@ -24,7 +25,8 @@ export function Onboarding({ onDismiss }: OnboardingProps) {
           <li>
             <Keyboard size={16} aria-hidden="true" />
             <span>
-              <kbd>⌘⇧Y</kbd> {strings.onboarding.shortcuts} <kbd>⌘L</kbd>{" "}
+              <kbd>{shortcutRestore()}</kbd> {strings.onboarding.shortcuts}{" "}
+              <kbd>{shortcutOpenLink()}</kbd>{" "}
               {strings.onboarding.shortcutsChange}
             </span>
           </li>

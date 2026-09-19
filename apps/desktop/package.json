@@ -1,7 +1,7 @@
 {
   "name": "@ytview/desktop",
   "version": "1.0.0",
-  "description": "YouTube Picture-in-Picture desktop app for macOS",
+  "description": "YouTube Picture-in-Picture desktop app for macOS, Windows and Linux",
   "private": true,
   "main": "electron-loader.cjs",
   "type": "module",
@@ -9,8 +9,11 @@
     "dev": "vite",
     "build": "tsc && vite build && cp src/preload/preload.cjs dist-electron/preload/preload.cjs && cp electron-loader.cjs dist-electron/electron-loader.cjs",
     "preview": "vite preview",
-    "electron:dev": "electron .",
+    "electron:dev": "pnpm run build && electron .",
     "electron:build": "npm run build && electron-builder",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:linux": "npm run build && electron-builder --linux",
     "clean": "rm -rf dist dist-electron dist-test",
     "postinstall": "electron-builder install-app-deps",
     "test": "tsc src/main/queue-logic.ts --outDir dist-test --module es2020 --target es2020 --skipLibCheck && node --test test/"
@@ -19,7 +22,9 @@
     "youtube",
     "pip",
     "electron",
-    "macos"
+    "macos",
+    "windows",
+    "linux"
   ],
   "license": "MIT",
   "devDependencies": {

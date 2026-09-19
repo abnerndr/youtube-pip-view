@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 try {
   contextBridge.exposeInMainWorld('electronAPI', {
+    platform: process.platform,
     getStoredVideo: () => ipcRenderer.invoke('get-stored-video'),
     saveVideo: (videoId) => ipcRenderer.invoke('save-video', videoId),
     saveVideoPosition: (videoId, seconds) =>

@@ -32,6 +32,11 @@ export async function createWindow(): Promise<
   let initialWidth = Math.max(storedSize?.width || defaultWidth, MIN_WIDTH);
   let initialHeight = Math.round(initialWidth / ASPECT_RATIO);
 
+  const isMac = process.platform === "darwin";
+  // No Linux o tray nem sempre está disponível; manter na barra de tarefas
+  // evita o app ficar inacessível se o ícone de bandeja falhar.
+  const skipTaskbar = process.platform !== "linux";
+
   const win = new BrowserWindow({
     width: initialWidth,
     height: initialHeight,
@@ -44,9 +49,10 @@ export async function createWindow(): Promise<
     resizable: true,
     movable: true,
     fullscreenable: true,
-    skipTaskbar: true,
+    skipTaskbar,
     alwaysOnTop: true,
-    type: "panel", // NSPanel no macOS - melhor comportamento para PiP
+    // NSPanel só existe no macOS; em Win/Linux a janela frameless padrão basta.
+    ...(isMac ? { type: "panel" as const } : {}),
     backgroundColor: "#000000",
     show: false, // Não mostrar até estar pronto
     webPreferences: {
@@ -62,13 +68,7 @@ export async function createWindow(): Promise<
 
   // Configuração de PiP - manter janela sempre no topo
   const applyPiPSettings = () => {
-    if (process.platform === "darwin") {
-      win.setAlwaysOnTop(true, "floating");
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    } else {
-      win.setAlwaysOnTop(true, "floating");
-      win.setVisibleOnAllWorkspaces(true);
-    }
+    applyFloatingPiPSettings(win);
   };
 
   // Aplicar imediatamente
@@ -153,18 +153,21 @@ export async function createQueueWindow(): Promise<
   return win;
 }
 
-// Função para aplicar configurações de PiP no macOS
-export function applyMacOSPiPSettings(
+/** Aplica always-on-top e visibilidade entre workspaces em qualquer SO. */
+export function applyFloatingPiPSettings(
   win: InstanceType<typeof BrowserWindow>
 ): void {
   if (process.platform === "darwin") {
     win.setAlwaysOnTop(true, "floating");
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   } else {
-    win.setAlwaysOnTop(true, "floating");
+    win.setAlwaysOnTop(true, "screen-saver");
     win.setVisibleOnAllWorkspaces(true);
   }
 }
+
+/** @deprecated Use applyFloatingPiPSettings */
+export const applyMacOSPiPSettings = applyFloatingPiPSettings;
 
 /**
  * Traz a janela de volta a partir de qualquer estado em que ela possa estar:
@@ -172,7 +175,7 @@ export function applyMacOSPiPSettings(
  * do "minimizar" que só baixava a opacidade.
  *
  * É o único caminho de restauração — usado pelo atalho global, pelo ícone da
- * barra de menu e por uma segunda instância do app.
+ * bandeja/tray e por uma segunda instância do app.
  */
 export function restoreWindow(
   win: InstanceType<typeof BrowserWindow> | null
@@ -186,7 +189,7 @@ export function restoreWindow(
     win.restore();
   }
 
-  applyMacOSPiPSettings(win);
+  applyFloatingPiPSettings(win);
   win.show();
   win.focus();
 }

@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import type { QueueState } from "../../types";
 import { PLAYER_STATE } from "../player/types";
 import type { PlayerFacade } from "../player/types";
+import { shortcutOpenLink } from "../platform";
 import { strings } from "../strings";
 
 const SEEK_STEP = 10;
@@ -442,7 +443,7 @@ export function VideoControls({
                 >
                   <Play size={14} aria-hidden="true" />
                   {strings.controls.changeVideo}
-                  <kbd>⌘L</kbd>
+                  <kbd>{shortcutOpenLink()}</kbd>
                 </button>
                 <button
                   type="button"

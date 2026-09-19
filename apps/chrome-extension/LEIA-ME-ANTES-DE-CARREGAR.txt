@@ -12,6 +12,16 @@ Para gerar/atualizar:
 
     pnpm turbo run build --filter=@ytview/chrome-extension
 
-Depois, em chrome://extensions, com o Modo do desenvolvedor ligado:
-"Carregar sem compactação" e selecione a pasta dist (ou a cópia em
-~/Downloads/YTView-extensao).
+Depois, em chrome://extensions (Chrome, Edge, Brave ou Chromium), com o
+Modo do desenvolvedor ligado: "Carregar sem compactação" e selecione a
+pasta dist.
+
+A extensão fala com o app desktop via http://localhost:8765 — funciona em
+macOS, Windows e Linux desde que o YTView esteja aberto.
+
+Atualização rápida (macOS/Linux):
+
+    ./scripts/update-extension.sh
+
+No Windows, copie a pasta dist para onde preferir e recarregue a extensão
+em chrome://extensions.

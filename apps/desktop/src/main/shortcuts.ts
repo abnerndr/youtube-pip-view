@@ -25,14 +25,14 @@ export function registerShortcuts(window: InstanceType<typeof BrowserWindow>): v
   );
 
   if (!playPauseRegistered) {
-    console.warn('Atalho global de pausa (⌘⇧Espaço) indisponível');
+    console.warn('Atalho global de pausa (CommandOrControl+Shift+Space) indisponível');
   }
 
   if (!registered) {
-    console.error('Falha ao registrar atalho Control+Shift+Y');
+    console.error('Falha ao registrar atalho CommandOrControl+Shift+Y');
 
     // Sem esse atalho e sem essa mensagem, a pessoa fica sem saber por que a
-    // janela não volta. O menu do ícone na barra continua funcionando.
+    // janela não volta. O menu do ícone na bandeja/tray continua funcionando.
     void dialog.showMessageBox({
       type: 'warning',
       title: strings.dialogs.shortcutTakenTitle,
@@ -41,7 +41,7 @@ export function registerShortcuts(window: InstanceType<typeof BrowserWindow>): v
       buttons: [strings.dialogs.ok],
     });
   } else {
-    console.log('Atalho Control+Shift+Y registrado com sucesso');
+    console.log('Atalho CommandOrControl+Shift+Y registrado com sucesso');
   }
 }
 

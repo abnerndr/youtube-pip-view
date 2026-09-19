@@ -5,7 +5,7 @@
 <h1 align="center">YTView</h1>
 
 <p align="center">
-  <strong>A focused floating YouTube player for macOS.</strong>
+  <strong>A focused floating YouTube player for macOS, Windows and Linux.</strong>
 </p>
 
 <p align="center">
@@ -16,12 +16,23 @@
 ---
 
 <p align="center">
-  <img src="./assets/ytview-preview.png" alt="YTView running on macOS" />
+  <img src="./assets/ytview-preview.png" alt="YTView running as a floating player" />
 </p>
+
+## Credits / Attribution
+
+This project is based on **[YTView](https://github.com/DouglasPrado/youtube-pip-view)** by [Douglas Prado](https://github.com/DouglasPrado).
+
+- Original repository: https://github.com/DouglasPrado/youtube-pip-view
+- Releases (original): https://github.com/DouglasPrado/youtube-pip-view/releases
+
+This fork extends the desktop app and documentation for **Windows** and **Linux** in addition to macOS. All credit for the original design and implementation goes to the upstream author.
+
+---
 
 ## What is YTView?
 
-YTView is a macOS desktop app designed for watching YouTube while you work.
+YTView is a desktop app designed for watching YouTube while you work.
 
 Instead of keeping a full browser window open, YTView provides a compact floating player that stays above other applications and keeps playback controls, queue management and browser integration close at hand.
 
@@ -49,7 +60,7 @@ It adds application-level capabilities around the video experience:
 - persistent queue
 - browser-to-desktop integration
 - global shortcuts
-- menu bar controls
+- system tray / menu bar controls
 - remembered playback state
 - playlist ingestion
 - queue reordering
@@ -75,7 +86,7 @@ Use it while:
 - browsing
 - working in fullscreen applications
 
-The player keeps a consistent video-oriented aspect ratio and is designed to behave like a native floating macOS utility.
+The player keeps a consistent video-oriented aspect ratio and is designed to behave like a native floating utility on macOS, Windows and Linux.
 
 ---
 
@@ -94,24 +105,6 @@ You can:
 - undo a cleared queue for a short period
 - keep the queue between application sessions
 
-Conceptually:
-
-```text
-Current Video
-     │
-     ▼
-┌───────────────┐
-│   Video #1    │
-├───────────────┤
-│   Video #2    │
-├───────────────┤
-│   Video #3    │
-└───────────────┘
-     │
-     ▼
-Auto advance
-```
-
 ---
 
 ### Chrome Extension
@@ -125,7 +118,7 @@ From YouTube you can:
 - add videos from thumbnails
 - send an entire playlist to YTView
 
-This turns the browser into a discovery interface while YTView remains the playback interface.
+Communication uses a local HTTP API (`localhost:8765`), so the extension works on **macOS, Windows and Linux** as long as the desktop app is running.
 
 ```text
 YouTube in Chrome
@@ -146,16 +139,14 @@ Floating Player
 
 ### Keyboard-first controls
 
-YTView supports both application shortcuts and global macOS shortcuts.
-
 #### Global shortcuts
 
 These work even when YTView is not focused:
 
-| Shortcut | Action |
-|---|---|
-| `⌘ ⇧ Y` | Bring YTView back |
-| `⌘ ⇧ Space` | Play / pause |
+| Shortcut (macOS) | Shortcut (Windows / Linux) | Action |
+|---|---|---|
+| `⌘ ⇧ Y` | `Ctrl ⇧ Y` | Bring YTView back |
+| `⌘ ⇧ Space` | `Ctrl ⇧ Space` | Play / pause |
 
 #### Player shortcuts
 
@@ -171,261 +162,160 @@ These work even when YTView is not focused:
 | `F` | Fullscreen |
 | `N` | Next video |
 | `P` | Previous video |
-| `⌘ L` | Open another video |
-| `⌘ W` | Hide YTView |
-| `⌘ Q` | Quit |
+| `⌘ L` / `Ctrl L` | Open another video |
+| `⌘ W` / close button | Hide YTView |
+| `⌘ Q` / tray Quit | Quit |
 
 ---
 
-### Menu Bar
+### System tray / menu bar
 
-YTView integrates with the macOS menu bar.
+YTView integrates with the OS tray:
 
-The menu bar icon provides quick access to:
+- **macOS** — menu bar icon
+- **Windows** — system tray (near the clock)
+- **Linux** — notification area / system tray (when supported by the desktop environment)
+
+The tray icon provides quick access to:
 
 - show the player
 - hide the player
 - open the queue
-- restore the window
 - quit the application
 
 Closing the player window hides YTView instead of destroying the current playback state.
 
 ---
 
-### Playback State
+# Install & use
 
-YTView remembers where you stopped.
+## 1. Desktop app
 
-When possible, the application restores:
+### Download (recommended)
 
-- the last video
-- playback position
-- queue state
+Download the latest build for your OS from the
+[Releases](https://github.com/DouglasPrado/youtube-pip-view/releases) page
+(or from this fork’s Releases once published).
 
-This allows the desktop player to behave more like a persistent media utility than a disposable browser tab.
+| OS | Package |
+|---|---|
+| macOS | `.dmg` or `.zip` |
+| Windows | `.exe` installer (NSIS) or portable `.exe` |
+| Linux | `.AppImage` or `.deb` |
 
----
+### macOS
 
-### Flexible YouTube links
-
-YTView accepts common YouTube URL formats including:
-
-```text
-youtube.com/watch?v=...
-youtu.be/...
-youtube.com/shorts/...
-YouTube live URLs
-11-character video IDs
-```
-
-Timestamp parameters such as `&t=` are also supported.
-
----
-
-### Playback controls
-
-The player supports:
-
-- play / pause
-- seeking
-- volume
-- mute
-- fullscreen
-- playback speed
-- captions
-- queue navigation
-
-Playback speed can be adjusted from `0.25×` to `2×`.
-
----
-
-# Architecture
-
-YTView is not implemented using the browser's native Picture-in-Picture API.
-
-It uses a regular Electron window configured to behave like a floating macOS player.
-
-The application has three main layers:
-
-```text
-┌───────────────────────────────────────────┐
-│              Electron Window              │
-│                                           │
-│  frameless                                │
-│  always-on-top                            │
-│  floating panel                           │
-│  visible across workspaces                │
-│                                           │
-│    ┌─────────────────────────────────┐    │
-│    │         React Renderer          │    │
-│    │                                 │    │
-│    │    Player UI                    │    │
-│    │    Queue                        │    │
-│    │    Controls                     │    │
-│    │                                 │    │
-│    │      ┌───────────────────┐      │    │
-│    │      │  YouTube Player   │      │    │
-│    │      │      iframe       │      │    │
-│    │      └───────────────────┘      │    │
-│    └─────────────────────────────────┘    │
-│                                           │
-└───────────────────────────────────────────┘
-```
-
-The Electron main process owns desktop-level behavior while the renderer manages the playback experience.
-
----
-
-# Browser Integration
-
-The Chrome extension communicates with the desktop application through a local HTTP API.
-
-```text
-┌──────────────────┐
-│     YouTube      │
-│      Chrome      │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Chrome Extension │
-└────────┬─────────┘
-         │
-         │ HTTP
-         ▼
-┌──────────────────────────┐
-│     localhost:8765       │
-│      Local API           │
-└────────────┬─────────────┘
-             │
-             ▼
-┌──────────────────────────┐
-│          YTView          │
-│                          │
-│  Player + Queue + State  │
-└──────────────────────────┘
-```
-
-The API provides a local bridge between browser discovery and desktop playback.
-
-This keeps the browser extension lightweight while allowing the desktop application to own queue state and playback behavior.
-
----
-
-# Monorepo
-
-YTView is organized as a pnpm workspace managed with Turborepo.
-
-```text
-youtube-pip-view/
-│
-├── apps/
-│   ├── desktop/              # Electron desktop application
-│   └── chrome-extension/     # Chrome integration
-│
-├── packages/                 # Shared packages
-│
-├── assets/                   # Application and repository assets
-│
-├── build/                    # Build resources
-│
-├── scripts/                  # Development/build scripts
-│
-├── pnpm-workspace.yaml
-├── turbo.json
-├── tsconfig.base.json
-└── package.json
-```
-
-The monorepo allows desktop, browser and shared code to evolve together while keeping application boundaries explicit.
-
----
-
-# Application Flow
-
-The most common browser-to-player flow looks like this:
-
-```text
-Discover video
-      │
-      ▼
-YouTube / Chrome
-      │
-      ▼
-Open in YTView
-      │
-      ▼
-Chrome Extension
-      │
-      ▼
-Local API
-      │
-      ▼
-Desktop App
-      │
-      ├── Play immediately
-      │
-      └── Add to queue
-```
-
-Queue playback follows:
-
-```text
-Video A
-   │
-   ▼
-Video B
-   │
-   ▼
-Video C
-   │
-   ▼
-...
-```
-
-The queue automatically advances when the current video finishes.
-
----
-
-# Technology
-
-YTView is primarily built with:
-
-```text
-TypeScript
-Electron
-React
-Node.js
-pnpm
-Turborepo
-Chrome Extensions
-```
-
-The desktop application uses Electron to access operating-system capabilities such as:
-
-- floating windows
-- global shortcuts
-- menu bar integration
-- application lifecycle
-- native packaging
-
-React powers the renderer and user-facing interface.
-
----
-
-# Download
-
-Download the latest macOS build from the
-[Releases](https://github.com/DouglasPrado/youtube-pip-view/releases) page.
-
-Download the `.dmg`, open it and drag **YTView** into your Applications folder.
+1. Download the `.dmg`.
+2. Open it and drag **YTView** into **Applications**.
+3. Launch YTView from Applications or Spotlight.
 
 > [!NOTE]
-> YTView is currently distributed without Apple notarization/signing.
+> YTView may be distributed without Apple notarization/signing.
 > macOS may block the first launch.
 >
 > Open **System Settings → Privacy & Security** and choose **Open Anyway** if necessary.
+>
+> Or from Terminal:
+> ```bash
+> xattr -cr /Applications/YTView.app
+> ```
+
+### Windows
+
+1. Download the NSIS installer (`.exe`) **or** the portable build.
+2. **Installer:** run the `.exe`, choose an install folder, finish the wizard.
+   Shortcuts are created on the Desktop and Start Menu.
+3. **Portable:** extract/run the portable `.exe` — no install required.
+4. Launch **YTView**. Look for the tray icon near the system clock if the window is hidden.
+5. If Windows SmartScreen warns about an unsigned app, choose **More info → Run anyway** (when you trust the build source).
+
+### Linux
+
+**AppImage**
+
+```bash
+chmod +x YTView-*.AppImage
+./YTView-*.AppImage
+```
+
+**Debian / Ubuntu (`.deb`)**
+
+```bash
+sudo dpkg -i YTView-*.deb
+# if dependencies are missing:
+sudo apt-get install -f
+ytview   # or launch from the app menu
+```
+
+**Notes**
+
+- On some desktop environments the tray icon needs AppIndicator support
+  (e.g. `libayatana-appindicator` / similar packages).
+- If the tray is unavailable, YTView stays visible in the taskbar so you can restore the window.
+
+---
+
+## 2. Chrome extension
+
+The extension works on **Chrome, Edge, Brave and Chromium** on macOS, Windows and Linux.
+
+### Build the extension
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm turbo run build --filter=@ytview/chrome-extension
+```
+
+The loadable folder is:
+
+```text
+apps/chrome-extension/dist
+```
+
+> Do **not** load `apps/chrome-extension/` (source). Load `dist` only.
+
+### Load in the browser
+
+1. Open `chrome://extensions` (or `edge://extensions`).
+2. Enable **Developer mode**.
+3. Click **Load unpacked** / **Carregar sem compactação**.
+4. Select `apps/chrome-extension/dist`.
+5. Start the **YTView desktop app** (the extension talks to `localhost:8765`).
+
+### Use it
+
+- On a YouTube (or supported) page, open the extension popup to **play** or **add to queue**.
+- Or use the page buttons / context actions the extension injects.
+- Keyboard (browser):
+  - `Ctrl+Shift+1` / `⌘⇧1` — play in YTView
+  - `Ctrl+Shift+2` / `⌘⇧2` — add to queue
+
+### Optional: sync copy (macOS / Linux)
+
+```bash
+./scripts/update-extension.sh
+```
+
+On Windows, copy the `dist` folder wherever you prefer and click **Reload** on the extension card.
+
+---
+
+## 3. Typical workflow
+
+```text
+Discover video in Chrome
+        │
+        ▼
+Open / Queue via extension
+        │
+        ▼
+YTView floating player
+        │
+        ├── Watch while you work
+        └── Manage queue from tray / queue window
+```
 
 ---
 
@@ -434,7 +324,8 @@ Download the `.dmg`, open it and drag **YTView** into your Applications folder.
 For users:
 
 ```text
-macOS
+macOS, Windows 10+, or a modern Linux desktop
+Chrome / Edge / Brave / Chromium (for the extension)
 ```
 
 For development:
@@ -471,30 +362,28 @@ Run the desktop application in development:
 
 ```bash
 cd apps/desktop
-npm run electron:dev
+pnpm run electron:dev
+```
+
+Run the extension in watch mode:
+
+```bash
+pnpm dev:extension
 ```
 
 ---
 
 # Tests
 
-Run the test suite:
-
 ```bash
 pnpm test
 ```
 
-The current tests cover important application behavior including:
-
-- accepted YouTube URL formats
-- video ID parsing
-- queue ordering
-- removing the active video
-- queue auto-advance
+Coverage includes YouTube URL formats, video ID parsing, queue ordering, removing the active video, and queue auto-advance.
 
 ---
 
-# Build
+# Build packages
 
 Build the workspace:
 
@@ -502,163 +391,93 @@ Build the workspace:
 pnpm turbo run build
 ```
 
-Build the macOS application:
+Build the desktop app for the **current OS**:
 
 ```bash
 cd apps/desktop
-npm run electron:build
+pnpm run electron:build
 ```
 
-The generated application packages are written to:
+Or target a specific platform (cross-compilation may require extra tooling):
+
+```bash
+pnpm run electron:build:mac
+pnpm run electron:build:win
+pnpm run electron:build:linux
+```
+
+Packages are written to:
 
 ```text
 apps/desktop/release/
 ```
 
----
-
-# Design Decisions
-
-## Electron window instead of native browser PiP
-
-YTView intentionally uses its own Electron window instead of the browser Picture-in-Picture API.
-
-This gives the application control over:
-
-- window behavior
-- queue interface
-- navigation
-- global shortcuts
-- menu bar integration
-- application state
-- browser integration
-
-The player can therefore behave as a complete desktop application rather than a restricted video surface.
+| Platform | Typical outputs |
+|---|---|
+| macOS | `.dmg`, `.zip` |
+| Windows | NSIS `.exe`, portable `.exe` |
+| Linux | `.AppImage`, `.deb` |
 
 ---
 
-## Local API instead of cloud communication
+# Architecture
 
-Communication between the Chrome extension and desktop application happens locally.
+YTView is not implemented using the browser's native Picture-in-Picture API.
+
+It uses a regular Electron window configured to behave like a floating player.
 
 ```text
-Chrome Extension
-       │
-       ▼
-localhost:8765
-       │
-       ▼
-YTView
+┌───────────────────────────────────────────┐
+│              Electron Window              │
+│                                           │
+│  frameless · always-on-top · floating     │
+│                                           │
+│    ┌─────────────────────────────────┐    │
+│    │         React Renderer          │    │
+│    │    Player UI · Queue · Controls │    │
+│    │         YouTube iframe          │    │
+│    └─────────────────────────────────┘    │
+└───────────────────────────────────────────┘
 ```
 
-No external backend is required just to send a video from the browser to the application.
-
-This keeps the integration simple and local-first.
+The Chrome extension communicates with the desktop app through a local HTTP API on `localhost:8765`.
 
 ---
 
-## Browser for discovery, desktop for playback
+# Monorepo
 
-YTView does not attempt to replace the entire YouTube website.
-
-YouTube remains useful for:
-
-- search
-- recommendations
-- subscriptions
-- playlists
-- discovery
-
-YTView focuses on the part that benefits from a dedicated desktop experience:
-
-> playback while doing something else.
-
----
-
-## Persistent queue instead of transient playback
-
-The queue is application state rather than temporary UI state.
-
-This allows YTView to restore a user's playback workflow across application sessions.
+```text
+youtube-pip-view/
+├── apps/
+│   ├── desktop/              # Electron desktop application
+│   └── chrome-extension/     # Chrome integration
+├── packages/                 # Shared packages
+├── assets/
+├── build/
+├── scripts/
+├── pnpm-workspace.yaml
+├── turbo.json
+└── package.json
+```
 
 ---
 
-# Engineering Goals
+# Design decisions
 
-YTView is designed around a few principles.
-
-### Focus
-
-The interface should prioritize the video instead of recreating the full YouTube experience.
-
-### Low friction
-
-Going from a browser video to a floating player should require minimal interaction.
-
-### Desktop integration
-
-The application should behave like a macOS utility rather than a browser window disguised as an app.
-
-### Persistence
-
-Queue and playback context should survive temporary window changes and application restarts.
-
-### Clear boundaries
-
-Browser integration, desktop behavior and shared application logic should remain independently understandable.
-
----
-
-# Project Status
-
-YTView is under active development.
-
-Current functionality includes:
-
-- floating macOS player
-- YouTube playback
-- Chrome extension
-- persistent queue
-- playlist queueing
-- keyboard controls
-- global shortcuts
-- playback speed
-- captions
-- menu bar integration
-- playback position persistence
-- `.dmg` packaging
-
-Future behavior and implementation details may evolve as the application matures.
-
----
-
-# Roadmap
-
-Areas being explored include:
-
-- stronger playback compatibility
-- improved browser integration
-- richer queue management
-- better macOS integration
-- application signing and notarization
-- additional playback providers
-- improved release automation
+- **Electron window instead of browser PiP** — full control over queue, shortcuts, tray and state.
+- **Local API instead of cloud** — extension ↔ app stays on `localhost`.
+- **Browser for discovery, desktop for playback** — YouTube stays the discovery surface.
+- **Persistent queue** — playback workflow survives hide/restart.
 
 ---
 
 # Contributing
 
-Contributions, bug reports and technical discussions are welcome.
-
-When contributing:
-
 1. Keep desktop-specific behavior inside the Electron boundary.
 2. Keep browser-specific behavior inside the extension.
 3. Prefer shared packages for reusable domain logic.
 4. Add tests for URL parsing and queue behavior when changing those systems.
-5. Verify the macOS build before submitting packaging-related changes.
-
-Before opening a pull request:
+5. Verify packaging on the OS you change (macOS / Windows / Linux).
 
 ```bash
 pnpm test
@@ -668,18 +487,6 @@ pnpm turbo run build
 ---
 
 # Philosophy
-
-Video is often secondary to the work happening around it.
-
-A tutorial runs while you code.
-
-A podcast runs while you write.
-
-A lecture runs while you take notes.
-
-A long video runs while you work in another application.
-
-YTView is built around that behavior.
 
 > **YouTube when you want it. Your workspace when you don't.**
 
@@ -695,5 +502,4 @@ YouTube and the YouTube logo are trademarks of Google LLC.
 
 # License
 
-See the repository license for licensing information.
-
+See the repository license for licensing information. Upstream project: [DouglasPrado/youtube-pip-view](https://github.com/DouglasPrado/youtube-pip-view).

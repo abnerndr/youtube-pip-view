@@ -1,9 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Tray, nativeImage, shell } from 'electron';
-import { createWindow, createQueueWindow, restoreWindow } from './window';
+import { createWindow, createQueueWindow, restoreWindow, applyFloatingPiPSettings } from './window';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
 import { stopServer, isExtensionApiAvailable } from './server';
 import { initQueueStore, getQueue, saveQueue, broadcastQueueUpdate, playVideoNow, addItemsToQueue, hydrateQueueTitles, setNowPlaying } from './queue-store';
 import Store from 'electron-store';
+import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import type { QueueItem, QueueState } from '../types/index';
@@ -14,6 +15,7 @@ import {
   removeFromQueue,
   reorderQueue,
 } from './queue-logic';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -104,28 +106,52 @@ function quitApp() {
   app.quit();
 }
 
-function createTray() {
-  if (process.platform !== 'darwin') return;
+function toggleMainWindowVisibility() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
 
+  // isVisible() sozinho não basta: a janela pode estar visível mas
+  // transparente, ou minimizada pelo sistema.
+  const isReallyVisible =
+    mainWindow.isVisible() &&
+    !mainWindow.isMinimized() &&
+    mainWindow.getOpacity() >= 1;
+
+  if (isReallyVisible) {
+    mainWindow.hide();
+  } else {
+    restoreWindow(mainWindow);
+  }
+}
+
+function createTray(): boolean {
   try {
-    // Template icon para macOS (adapta automaticamente ao tema claro/escuro)
-    const iconPath = path.join(__dirname, '../../assets/tray-iconTemplate.png');
-    let trayImage;
+    const isMac = process.platform === 'darwin';
+    const assetsDir = path.join(__dirname, '../../assets');
+    const templatePath = path.join(assetsDir, 'tray-iconTemplate.png');
+    const regularPath = path.join(assetsDir, 'tray-icon.png');
 
-    try {
-      trayImage = nativeImage.createFromPath(iconPath);
-      trayImage.setTemplateImage(true);
-    } catch (e) {
-      // Fallback para ícone regular
-      const fallbackPath = path.join(__dirname, '../../assets/tray-icon.png');
-      try {
-        trayImage = nativeImage.createFromPath(fallbackPath);
-      } catch (e2) {
-        trayImage = nativeImage.createEmpty();
-      }
+    let trayImage = nativeImage.createFromPath(
+      isMac && fs.existsSync(templatePath) ? templatePath : regularPath
+    );
+
+    if (trayImage.isEmpty()) {
+      trayImage = nativeImage.createFromPath(regularPath);
+    }
+    if (trayImage.isEmpty()) {
+      trayImage = nativeImage.createEmpty();
     }
 
-    tray = new Tray(trayImage || nativeImage.createEmpty());
+    // macOS: template adapta ao tema claro/escuro da barra de menu.
+    if (isMac && !trayImage.isEmpty()) {
+      trayImage.setTemplateImage(true);
+    }
+
+    // Windows espera ícone pequeno na bandeja do sistema.
+    if (process.platform === 'win32' && !trayImage.isEmpty()) {
+      trayImage = trayImage.resize({ width: 16, height: 16 });
+    }
+
+    tray = new Tray(trayImage);
     tray.setToolTip(strings.app.trayTooltip);
 
     // Menu do Tray: o caminho de volta visível quando a janela está escondida.
@@ -147,32 +173,22 @@ function createTray() {
       { type: 'separator' },
       {
         label: strings.tray.quit,
-        accelerator: 'Command+Q',
+        accelerator: process.platform === 'darwin' ? 'Command+Q' : 'Alt+F4',
         click: quitApp,
       },
     ]);
 
-    // Botão direito abre o menu; botão esquerdo continua alternando a janela.
+    // setContextMenu cobre botão direito em Win/Linux e macOS.
+    tray.setContextMenu(contextMenu);
     tray.on('right-click', () => tray?.popUpContextMenu(contextMenu));
+    tray.on('click', toggleMainWindowVisibility);
+    tray.on('double-click', () => restoreWindow(mainWindow));
 
-    tray.on('click', () => {
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-
-      // isVisible() sozinho não basta: a janela pode estar visível mas
-      // transparente, ou minimizada pelo sistema.
-      const isReallyVisible =
-        mainWindow.isVisible() &&
-        !mainWindow.isMinimized() &&
-        mainWindow.getOpacity() >= 1;
-
-      if (isReallyVisible) {
-        mainWindow.hide();
-      } else {
-        restoreWindow(mainWindow);
-      }
-    });
+    return true;
   } catch (error) {
     console.error('Erro ao criar Tray:', error);
+    tray = null;
+    return false;
   }
 }
 
@@ -225,7 +241,12 @@ async function bootstrap() {
   registerShortcuts(mainWindow);
   attachHideOnClose(mainWindow);
 
-  createTray();
+  const hasTray = createTray();
+  // Sem tray (comum em alguns DEs Linux), a janela precisa aparecer na barra
+  // de tarefas — senão fechar esconde o app sem caminho de volta.
+  if (!hasTray && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setSkipTaskbar(false);
+  }
 
   if (!isExtensionApiAvailable()) {
     warnExtensionApiUnavailable();
@@ -278,7 +299,9 @@ if (!gotTheLock) {
 }
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  // Com tray ativo, o app continua rodando em segundo plano (como no macOS).
+  // Sem tray, encerrar evita processo órfão sem UI.
+  if (process.platform !== 'darwin' && !tray) {
     isQuitting = true;
     stopServer();
     app.quit();
@@ -405,13 +428,7 @@ ipcMain.handle('toggle-fullscreen', () => {
       mainWindow.setFullScreen(false);
       setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          if (process.platform === 'darwin') {
-            mainWindow.setAlwaysOnTop(true, 'floating');
-            mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-          } else {
-            mainWindow.setAlwaysOnTop(true, 'floating');
-            mainWindow.setVisibleOnAllWorkspaces(true);
-          }
+          applyFloatingPiPSettings(mainWindow);
         }
       }, 300);
     }

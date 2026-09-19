@@ -16,6 +16,9 @@ if (fs.existsSync(path.join(__dirname, 'main/main.js'))) {
   mainPath = path.join(__dirname, 'dist-electron/main/main.js');
 } else {
   console.error('Could not find main.js');
+  console.error('Expected either:');
+  console.error('  - dist-electron/main/main.js  (run: pnpm run build)');
+  console.error('  - main/main.js                (packaged app)');
   process.exit(1);
 }
 

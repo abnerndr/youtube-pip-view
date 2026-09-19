@@ -5,18 +5,30 @@
  * (README, comentários de commit) fica em inglês. Antes disto convivia
  * "Abrir PIP" com "Add all to YTView" na mesma tarefa.
  */
+import {
+  shortcutOpenLink,
+  shortcutQuit,
+  shortcutRestore,
+} from "./platform";
+
 export const strings = {
   player: {
     emptyTitle: "Escolha um vídeo",
-    emptyHint: "Clique aqui ou pressione ⌘L para colar um link",
+    get emptyHint() {
+      return `Clique aqui ou pressione ${shortcutOpenLink()} para colar um link`;
+    },
     emptyAria: "Escolher um vídeo",
     loading: "Carregando",
     hide: "Esconder a janela",
-    hideHint: "Esconder (⌘⇧Y traz de volta)",
+    get hideHint() {
+      return `Esconder (${shortcutRestore()} traz de volta)`;
+    },
     fullscreen: "Tela cheia",
     exitFullscreen: "Sair da tela cheia",
     close: "Fechar a janela",
-    closeHint: "Fechar (⌘Q para sair do app)",
+    get closeHint() {
+      return `Fechar (${shortcutQuit()} para sair do app)`;
+    },
   },
 
   controls: {
@@ -104,4 +116,4 @@ export const strings = {
         ? "1 vídeo removido da fila"
         : `${count} vídeos removidos da fila`,
   },
-} as const;
+};

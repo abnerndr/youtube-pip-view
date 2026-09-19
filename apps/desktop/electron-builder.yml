@@ -26,9 +26,22 @@ win:
   target:
     - nsis
     - portable
+  artifactName: ${productName}-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: YTView
 linux:
   icon: build/icon.png
   category: AudioVideo
+  maintainer: YTView contributors
+  desktop:
+    Name: YTView
+    Comment: Floating YouTube Picture-in-Picture player
+    Categories: AudioVideo;Player;Video;
   target:
     - AppImage
     - deb
+  artifactName: ${productName}-${version}-${arch}.${ext}
