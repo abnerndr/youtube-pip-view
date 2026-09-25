@@ -27,6 +27,8 @@ try {
     setAlwaysOnTop: (enabled) => ipcRenderer.invoke('set-always-on-top', enabled),
     getStoredCaptions: () => ipcRenderer.invoke('get-stored-captions'),
     saveCaptions: (enabled) => ipcRenderer.invoke('save-captions', enabled),
+    getStoredQuality: () => ipcRenderer.invoke('get-stored-quality'),
+    saveQuality: (quality) => ipcRenderer.invoke('save-quality', quality),
     minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
     closeWindow: () => ipcRenderer.invoke('close-window'),
     quitApp: () => ipcRenderer.invoke('quit-app'),

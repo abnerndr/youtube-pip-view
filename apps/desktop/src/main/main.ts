@@ -26,6 +26,7 @@ const store = new Store<{
   volume?: number;
   muted?: boolean;
   captionsEnabled?: boolean;
+  preferredQuality?: string;
   onboardingSeen?: boolean;
   windowSize?: { width: number; height: number };
   queue?: QueueState;
@@ -366,6 +367,16 @@ ipcMain.handle('get-stored-captions', (_: any) => {
 
 ipcMain.handle('save-captions', (_: any, enabled: boolean) => {
   store.set('captionsEnabled', Boolean(enabled));
+});
+
+ipcMain.handle('get-stored-quality', (_: any) => {
+  return store.get('preferredQuality') ?? 'auto';
+});
+
+ipcMain.handle('save-quality', (_: any, quality: string) => {
+  if (typeof quality === 'string' && quality.trim()) {
+    store.set('preferredQuality', quality.trim());
+  }
 });
 
 ipcMain.handle('get-always-on-top', (_: any) => {

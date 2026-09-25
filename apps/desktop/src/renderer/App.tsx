@@ -235,45 +235,28 @@ export function App() {
     window.electronAPI?.saveMuted(muted);
   }, [player]);
 
-  // ===== Controles: aparecer com o mouse, sumir após 5s idle / blur =====
+  // ===== Controles: aparecer com o mouse, sumir 5s após o último movimento =====
 
   useEffect(() => {
     let hideTimeout: ReturnType<typeof setTimeout> | null = null;
-    let pointer = { x: -1, y: -1 };
-
-    /**
-     * O cursor está sobre algum controle? Esperar pelo mouseenter não basta:
-     * quando os controles aparecem embaixo de um cursor parado, o evento
-     * nunca dispara — e a barra sumia justamente na hora de clicar nela.
-     */
-    const pointerIsOverControls = () => {
-      if (pointer.x < 0) return false;
-      const element = document.elementFromPoint(pointer.x, pointer.y);
-      return Boolean(
-        element?.closest(".video-controls-container, .window-buttons")
-      );
-    };
 
     const scheduleHide = () => {
       if (hideTimeout) clearTimeout(hideTimeout);
       hideTimeout = setTimeout(() => {
-        if (pointerIsOverControls()) {
-          scheduleHide();
-          return;
-        }
         setShowControls(false);
+        // Garante que um pin antigo (menu/hover) não segure a barra pra sempre.
+        setControlsPinned(false);
       }, CONTROLS_HIDE_DELAY);
     };
 
-    const handleMouseMove = (event: MouseEvent) => {
-      pointer = { x: event.clientX, y: event.clientY };
+    const handleMouseMove = () => {
       setShowControls(true);
       scheduleHide();
     };
 
     const handleBlur = () => {
-      // Clicou fora do PiP: agenda o hide sem depender do mouse.
       if (hideTimeout) clearTimeout(hideTimeout);
+      setControlsPinned(false);
       hideTimeout = setTimeout(() => {
         setShowControls(false);
       }, CONTROLS_HIDE_DELAY);
@@ -284,13 +267,26 @@ export function App() {
       scheduleHide();
     };
 
+    // Clique na barra (play/pause etc.): reinicia o timer de 5s em vez de
+    // ficar eternamente visível só porque o ponteiro ficou parado no botão.
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (!target?.closest?.(".video-controls-container, .window-buttons")) {
+        return;
+      }
+      setShowControls(true);
+      scheduleHide();
+    };
+
     document.addEventListener("mousemove", handleMouseMove, true);
+    document.addEventListener("pointerdown", handlePointerDown, true);
     window.addEventListener("blur", handleBlur);
     window.addEventListener("focus", handleFocus);
     scheduleHide();
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove, true);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
       if (hideTimeout) clearTimeout(hideTimeout);

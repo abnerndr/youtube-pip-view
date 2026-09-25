@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAlwaysOnTop: (enabled: boolean) => ipcRenderer.invoke('set-always-on-top', enabled),
   getStoredCaptions: () => ipcRenderer.invoke('get-stored-captions'),
   saveCaptions: (enabled: boolean) => ipcRenderer.invoke('save-captions', enabled),
+  getStoredQuality: () => ipcRenderer.invoke('get-stored-quality'),
+  saveQuality: (quality: string) => ipcRenderer.invoke('save-quality', quality),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   closeWindow: () => ipcRenderer.invoke('close-window'),
   quitApp: () => ipcRenderer.invoke('quit-app'),
@@ -93,6 +95,8 @@ declare global {
       setAlwaysOnTop: (enabled: boolean) => Promise<boolean>;
       getStoredCaptions: () => Promise<boolean>;
       saveCaptions: (enabled: boolean) => Promise<void>;
+      getStoredQuality: () => Promise<string>;
+      saveQuality: (quality: string) => Promise<void>;
       minimizeWindow: () => Promise<void>;
       closeWindow: () => Promise<void>;
       quitApp: () => Promise<void>;

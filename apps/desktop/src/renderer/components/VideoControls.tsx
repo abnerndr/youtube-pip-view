@@ -96,16 +96,39 @@ export function VideoControls({
   const [playbackQuality, setPlaybackQuality] = useState("auto");
   const menuRef = useRef<HTMLDivElement>(null);
   const captionsPrefRef = useRef(false);
+  const qualityPrefRef = useRef("auto");
 
-  // Preferência de legendas: carregar uma vez e reaplicar no player.
+  const applyPreferredQuality = (facade: PlayerFacade) => {
+    if (!facade.capabilities.quality) return;
+    const levels = facade.getAvailableQualityLevels();
+    setQualityLevels(levels);
+    const preferred = qualityPrefRef.current || "auto";
+    const target = levels.includes(preferred)
+      ? preferred
+      : levels.includes("auto")
+        ? "auto"
+        : levels[0] || "auto";
+    if (target && target !== "auto") {
+      facade.setPlaybackQuality(target);
+    } else if (target === "auto") {
+      facade.setPlaybackQuality("auto");
+    }
+    setPlaybackQuality(target);
+  };
+
+  // Preferência de legendas e qualidade: carregar uma vez e reaplicar no player.
   useEffect(() => {
     let cancelled = false;
-    window.electronAPI
-      ?.getStoredCaptions?.()
-      .then((enabled) => {
+    Promise.all([
+      window.electronAPI?.getStoredCaptions?.() ?? Promise.resolve(false),
+      window.electronAPI?.getStoredQuality?.() ?? Promise.resolve("auto"),
+    ])
+      .then(([enabled, quality]) => {
         if (cancelled) return;
-        captionsPrefRef.current = enabled;
-        setCaptionsOn(enabled);
+        captionsPrefRef.current = Boolean(enabled);
+        setCaptionsOn(Boolean(enabled));
+        qualityPrefRef.current = typeof quality === "string" && quality ? quality : "auto";
+        setPlaybackQuality(qualityPrefRef.current);
       })
       .catch(() => undefined);
     return () => {
@@ -132,10 +155,7 @@ export function VideoControls({
     setIsPlaying(player.isPlaying());
     setIsLive(player.isLive());
     setPlaybackRate(player.getPlaybackRate());
-    if (player.capabilities.quality) {
-      setQualityLevels(player.getAvailableQualityLevels());
-      setPlaybackQuality(player.getPlaybackQuality());
-    }
+    applyPreferredQuality(player);
 
     // Reaplica legendas (o YouTube costuma religá-las ao carregar).
     player.setCaptionsEnabled(captionsPrefRef.current);
@@ -156,10 +176,7 @@ export function VideoControls({
       if (state === PLAYER_STATE.PLAYING) {
         setPlaybackRate(player.getPlaybackRate());
         setIsLive(player.isLive());
-        if (player.capabilities.quality) {
-          setQualityLevels(player.getAvailableQualityLevels());
-          setPlaybackQuality(player.getPlaybackQuality());
-        }
+        applyPreferredQuality(player);
         // Religa off se a preferência for off (YouTube reinicia CC no play).
         if (!captionsPrefRef.current) {
           player.setCaptionsEnabled(false);
@@ -168,14 +185,14 @@ export function VideoControls({
     });
   }, [player]);
 
-  // Trocou de vídeo: zerar o que é do vídeo anterior, manter preferência de CC.
+  // Trocou de vídeo: zerar o que é do vídeo anterior, manter preferências.
   useEffect(() => {
     setCurrentTime(0);
     setDuration(0);
     setSeekPreview(null);
     setCaptionsOn(captionsPrefRef.current);
     setQualityLevels([]);
-    setPlaybackQuality("auto");
+    setPlaybackQuality(qualityPrefRef.current || "auto");
     setIsLive(false);
   }, [videoId]);
 
@@ -314,8 +331,10 @@ export function VideoControls({
   };
 
   const handleQualityChange = (level: string) => {
+    qualityPrefRef.current = level;
     player?.setPlaybackQuality(level);
     setPlaybackQuality(level);
+    window.electronAPI?.saveQuality?.(level);
   };
 
   const handleLiveSync = () => {
@@ -344,7 +363,6 @@ export function VideoControls({
         className={`video-controls-container ${
           showControls ? "visible" : "hidden"
         }`}
-        onMouseEnter={() => onInteractingChange(true)}
         onMouseLeave={() => onInteractingChange(menuOpen)}
       >
         <div className="video-progress-container">
