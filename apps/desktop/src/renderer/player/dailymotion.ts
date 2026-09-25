@@ -120,6 +120,15 @@ export async function createDailymotionPlayer({
     setCaptionsEnabled() {
       /* não exposto pelo embed */
     },
+    isLive: () => false,
+    seekToLive() {
+      /* não aplicável */
+    },
+    getAvailableQualityLevels: () => [],
+    getPlaybackQuality: () => "auto",
+    setPlaybackQuality() {
+      /* não suportado */
+    },
     getVideoTitle: () => "",
     onProgress(callback) {
       progressListeners.push(callback);

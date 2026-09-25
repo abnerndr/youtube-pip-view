@@ -23,6 +23,10 @@ export const strings = {
     get hideHint() {
       return `Esconder (${shortcutRestore()} traz de volta)`;
     },
+    pin: "Destacar",
+    pinHint: "Manter a janela sempre na frente",
+    unpin: "Segundo plano",
+    unpinHint: "Permitir que outras janelas fiquem na frente",
     fullscreen: "Tela cheia",
     exitFullscreen: "Sair da tela cheia",
     close: "Fechar a janela",
@@ -56,7 +60,10 @@ export const strings = {
     captionsOn: "ligadas",
     captionsOff: "desligadas",
     speed: "Velocidade",
+    quality: "Qualidade",
+    qualityAuto: "Automática",
     live: "AO VIVO",
+    liveSync: "Sincronizar com o ao vivo",
     nativeControls: "Use os controles do player",
   },
 

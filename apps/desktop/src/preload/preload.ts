@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setNowPlaying: (videoId: string) => ipcRenderer.invoke('set-now-playing', videoId),
   openExternalUrl: (url: string) => ipcRenderer.invoke('open-external-url', url),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  getAlwaysOnTop: () => ipcRenderer.invoke('get-always-on-top'),
+  setAlwaysOnTop: (enabled: boolean) => ipcRenderer.invoke('set-always-on-top', enabled),
+  getStoredCaptions: () => ipcRenderer.invoke('get-stored-captions'),
+  saveCaptions: (enabled: boolean) => ipcRenderer.invoke('save-captions', enabled),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   closeWindow: () => ipcRenderer.invoke('close-window'),
   quitApp: () => ipcRenderer.invoke('quit-app'),
@@ -85,6 +89,10 @@ declare global {
       onTogglePlay: (callback: () => void) => () => void;
       openExternalUrl: (url: string) => Promise<void>;
       toggleFullscreen: () => Promise<boolean>;
+      getAlwaysOnTop: () => Promise<boolean>;
+      setAlwaysOnTop: (enabled: boolean) => Promise<boolean>;
+      getStoredCaptions: () => Promise<boolean>;
+      saveCaptions: (enabled: boolean) => Promise<void>;
       minimizeWindow: () => Promise<void>;
       closeWindow: () => Promise<void>;
       quitApp: () => Promise<void>;

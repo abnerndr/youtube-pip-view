@@ -7,6 +7,7 @@ import {
   Play,
   RotateCcw,
   RotateCw,
+  Settings2,
   SkipBack,
   SkipForward,
   Subtitles,
@@ -14,7 +15,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { QueueState } from "../../types";
 import { PLAYER_STATE } from "../player/types";
 import type { PlayerFacade } from "../player/types";
@@ -22,6 +23,23 @@ import { shortcutOpenLink } from "../platform";
 import { strings } from "../strings";
 
 const SEEK_STEP = 10;
+
+const QUALITY_LABELS: Record<string, string> = {
+  auto: strings.controls.qualityAuto,
+  highres: "4K",
+  hd2160: "2160p",
+  hd1440: "1440p",
+  hd1080: "1080p",
+  hd720: "720p",
+  large: "480p",
+  medium: "360p",
+  small: "240p",
+  tiny: "144p",
+};
+
+function qualityLabel(level: string): string {
+  return QUALITY_LABELS[level] ?? level;
+}
 
 interface VideoControlsProps {
   player: PlayerFacade | null;
@@ -73,7 +91,27 @@ export function VideoControls({
   const [menuOpen, setMenuOpen] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [captionsOn, setCaptionsOn] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [qualityLevels, setQualityLevels] = useState<string[]>([]);
+  const [playbackQuality, setPlaybackQuality] = useState("auto");
   const menuRef = useRef<HTMLDivElement>(null);
+  const captionsPrefRef = useRef(false);
+
+  // Preferência de legendas: carregar uma vez e reaplicar no player.
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI
+      ?.getStoredCaptions?.()
+      .then((enabled) => {
+        if (cancelled) return;
+        captionsPrefRef.current = enabled;
+        setCaptionsOn(enabled);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Tempo e duração vêm do player. Nada de estimativa por relógio.
   useEffect(() => {
@@ -83,6 +121,7 @@ export function VideoControls({
       if (seekPreview === null) {
         setCurrentTime(time);
       }
+      setIsLive(player.isLive());
     });
   }, [player, seekPreview]);
 
@@ -91,6 +130,16 @@ export function VideoControls({
   useEffect(() => {
     if (!player) return;
     setIsPlaying(player.isPlaying());
+    setIsLive(player.isLive());
+    setPlaybackRate(player.getPlaybackRate());
+    if (player.capabilities.quality) {
+      setQualityLevels(player.getAvailableQualityLevels());
+      setPlaybackQuality(player.getPlaybackQuality());
+    }
+
+    // Reaplica legendas (o YouTube costuma religá-las ao carregar).
+    player.setCaptionsEnabled(captionsPrefRef.current);
+    setCaptionsOn(captionsPrefRef.current);
 
     return player.onStateChange((state) => {
       if (state === PLAYER_STATE.PLAYING || state === PLAYER_STATE.BUFFERING) {
@@ -106,16 +155,28 @@ export function VideoControls({
 
       if (state === PLAYER_STATE.PLAYING) {
         setPlaybackRate(player.getPlaybackRate());
+        setIsLive(player.isLive());
+        if (player.capabilities.quality) {
+          setQualityLevels(player.getAvailableQualityLevels());
+          setPlaybackQuality(player.getPlaybackQuality());
+        }
+        // Religa off se a preferência for off (YouTube reinicia CC no play).
+        if (!captionsPrefRef.current) {
+          player.setCaptionsEnabled(false);
+        }
       }
     });
   }, [player]);
 
-  // Trocou de vídeo: zerar o que é do vídeo anterior.
+  // Trocou de vídeo: zerar o que é do vídeo anterior, manter preferência de CC.
   useEffect(() => {
     setCurrentTime(0);
     setDuration(0);
     setSeekPreview(null);
-    setCaptionsOn(false);
+    setCaptionsOn(captionsPrefRef.current);
+    setQualityLevels([]);
+    setPlaybackQuality("auto");
+    setIsLive(false);
   }, [videoId]);
 
   const resolveCurrentQueueIndex = (queueState: QueueState): number => {
@@ -246,8 +307,19 @@ export function VideoControls({
 
   const handleCaptionsToggle = () => {
     const next = !captionsOn;
+    captionsPrefRef.current = next;
     player?.setCaptionsEnabled(next);
     setCaptionsOn(next);
+    window.electronAPI?.saveCaptions?.(next);
+  };
+
+  const handleQualityChange = (level: string) => {
+    player?.setPlaybackQuality(level);
+    setPlaybackQuality(level);
+  };
+
+  const handleLiveSync = () => {
+    player?.seekToLive();
   };
 
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume <= 50 ? Volume1 : Volume2;
@@ -259,7 +331,10 @@ export function VideoControls({
   // Dailymotion opera pelos próprios botões: mostrar os nossos seria oferecer
   // controle que não existe. Sobra a navegação da fila e o menu.
   const nativeControls = Boolean(can.nativeControls);
-  const isLive = Boolean(player) && !can.seek && !nativeControls;
+  // Twitch live: sem seek. YouTube live: seek (DVR) + botão AO VIVO.
+  const liveWithoutSeek = isLive && !can.seek && !nativeControls;
+  const showLiveSync = isLive && can.seek && !nativeControls;
+  const canQuality = Boolean(can.quality) && qualityLevels.length > 0;
 
   return (
     <div className="video-controls-wrapper">
@@ -335,7 +410,7 @@ export function VideoControls({
 
           {nativeControls ? (
             <span className="video-native-hint">{strings.controls.nativeControls}</span>
-          ) : isLive ? (
+          ) : liveWithoutSeek ? (
             <span className="video-live" role="status">
               {strings.controls.live}
             </span>
@@ -369,14 +444,26 @@ export function VideoControls({
               setSeekPreview(null);
             }}
             className="video-progress-slider"
+            style={{ "--progress": `${progressPercentage}%` } as CSSProperties}
             title={hasDuration ? strings.controls.seekHint : strings.controls.loadingHint}
             aria-label={strings.controls.position}
           />
 
-          {/* Duração só aparece quando é real - nada de número inventado. */}
-          <span className="video-time">
-            {hasDuration ? formatTime(duration) : "--:--"}
-          </span>
+          {showLiveSync ? (
+            <button
+              type="button"
+              className="video-live video-live-button"
+              onClick={handleLiveSync}
+              title={strings.controls.liveSync}
+              aria-label={strings.controls.liveSync}
+            >
+              {strings.controls.live}
+            </button>
+          ) : (
+            <span className="video-time">
+              {hasDuration ? formatTime(duration) : "--:--"}
+            </span>
+          )}
             </>
           )}
 
@@ -458,7 +545,7 @@ export function VideoControls({
                   {strings.controls.openOnYouTube}
                 </button>
 
-                {(can.captions || can.speed) && (
+                {(can.captions || can.speed || canQuality) && (
                   <div className="controls-menu-separator" role="separator" />
                 )}
 
@@ -476,6 +563,30 @@ export function VideoControls({
                     {captionsOn ? strings.controls.captionsOn : strings.controls.captionsOff}
                   </span>
                 </button>
+                )}
+
+                {canQuality && (
+                <div className="controls-menu-label">
+                  <Settings2 size={14} aria-hidden="true" />
+                  {strings.controls.quality}
+                </div>
+                )}
+                {canQuality && (
+                <div className="controls-menu-rates">
+                  {qualityLevels.map((level) => (
+                    <button
+                      type="button"
+                      key={level}
+                      className={`rate-button ${
+                        playbackQuality === level ? "active" : ""
+                      }`}
+                      onClick={() => handleQualityChange(level)}
+                      aria-pressed={playbackQuality === level}
+                    >
+                      {qualityLabel(level)}
+                    </button>
+                  ))}
+                </div>
                 )}
 
                 {can.speed && (

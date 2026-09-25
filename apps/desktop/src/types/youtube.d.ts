@@ -18,6 +18,8 @@ declare namespace YT {
     video_id: string;
     author: string;
     title: string;
+    /** Presente em várias builds do player para lives. */
+    isLive?: boolean;
   }
 
   interface PlayerOptions {
@@ -80,6 +82,7 @@ declare namespace YT {
     setPlaybackRate(suggestedRate: number): void;
     getAvailableQualityLevels(): string[];
     setPlaybackQuality(suggestedQuality: string): void;
+    getPlaybackQuality(): string;
     getIframe(): HTMLIFrameElement;
     setVolume(volume: number): void;
     getVolume(): number;

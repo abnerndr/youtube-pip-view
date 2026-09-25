@@ -97,6 +97,9 @@ export async function createPlayerFacade({
   let progressTimer: ReturnType<typeof setInterval> | null = null;
   let hasStartedCurrentVideo = false;
   let destroyed = false;
+  let lastSeenDuration = 0;
+  let durationGrowthHits = 0;
+  let knownLive = false;
 
   const player = new window.YT.Player(mount, {
     host: "https://www.youtube.com",
@@ -153,10 +156,15 @@ export async function createPlayerFacade({
 
   function emitProgress() {
     if (destroyed || progressListeners.length === 0) return;
-    const progress: PlayerProgress = {
-      currentTime: safeNumber(() => player.getCurrentTime()),
-      duration: safeNumber(() => player.getDuration()),
-    };
+    const currentTime = safeNumber(() => player.getCurrentTime());
+    const duration = safeNumber(() => player.getDuration());
+    // Lives com DVR: a duração sobe com o tempo. Dois ticks crescentes bastam.
+    if (duration > lastSeenDuration + 0.8) {
+      durationGrowthHits += 1;
+      if (durationGrowthHits >= 2) knownLive = true;
+    }
+    lastSeenDuration = Math.max(lastSeenDuration, duration);
+    const progress: PlayerProgress = { currentTime, duration };
     progressListeners.forEach((listener) => listener(progress));
   }
 
@@ -169,10 +177,13 @@ export async function createPlayerFacade({
 
   const facade: PlayerFacade = {
     provider: "youtube",
-    capabilities: { seek: true, speed: true, captions: true },
+    capabilities: { seek: true, speed: true, captions: true, quality: true },
 
     load(videoId: string, startSeconds = 0) {
       hasStartedCurrentVideo = false;
+      lastSeenDuration = 0;
+      durationGrowthHits = 0;
+      knownLive = false;
       try {
         player.loadVideoById({ videoId, startSeconds });
       } catch (error) {
@@ -281,10 +292,73 @@ export async function createPlayerFacade({
           player.loadModule("captions");
           player.setOption("captions", "track", { languageCode: "" });
         } else {
+          // Track vazia + unload: o YouTube tende a religar CC sozinho
+          // só com unloadModule em alguns vídeos.
+          try {
+            player.setOption("captions", "track", {});
+          } catch {
+            /* ignore */
+          }
           player.unloadModule("captions");
         }
       } catch {
         /* nem todo vídeo tem legendas */
+      }
+    },
+    isLive() {
+      if (knownLive) return true;
+      try {
+        const data = player.getVideoData() as YT.VideoData & {
+          isLive?: boolean;
+        };
+        if (data?.isLive === true) {
+          knownLive = true;
+          return true;
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        const url = player.getVideoUrl?.() ?? "";
+        if (/[?&]live_stream|\/live\//i.test(url)) {
+          knownLive = true;
+          return true;
+        }
+      } catch {
+        /* ignore */
+      }
+      return false;
+    },
+    seekToLive() {
+      try {
+        const duration = facade.getDuration();
+        // Número grande + allowSeekAhead leva ao live edge.
+        player.seekTo(duration > 0 ? duration : 1e10, true);
+      } catch {
+        /* player ainda não pronto */
+      }
+      emitProgress();
+    },
+    getAvailableQualityLevels() {
+      try {
+        const levels = player.getAvailableQualityLevels();
+        return Array.isArray(levels) ? levels : ["auto"];
+      } catch {
+        return ["auto"];
+      }
+    },
+    getPlaybackQuality() {
+      try {
+        return player.getPlaybackQuality() || "auto";
+      } catch {
+        return "auto";
+      }
+    },
+    setPlaybackQuality(quality: string) {
+      try {
+        player.setPlaybackQuality(quality);
+      } catch {
+        /* API pode ignorar em alguns vídeos */
       }
     },
     getVideoTitle() {

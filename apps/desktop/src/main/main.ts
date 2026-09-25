@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Tray, nativeImage, shell } from 'electron';
-import { createWindow, createQueueWindow, restoreWindow, applyFloatingPiPSettings } from './window';
+import { createWindow, createQueueWindow, restoreWindow, applyFloatingPiPSettings, getAlwaysOnTopPreference, setAlwaysOnTopPreference } from './window';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
 import { stopServer, isExtensionApiAvailable } from './server';
 import { initQueueStore, getQueue, saveQueue, broadcastQueueUpdate, playVideoNow, addItemsToQueue, hydrateQueueTitles, setNowPlaying } from './queue-store';
@@ -25,6 +25,7 @@ const store = new Store<{
   lastVideoPosition?: { videoId: string; seconds: number };
   volume?: number;
   muted?: boolean;
+  captionsEnabled?: boolean;
   onboardingSeen?: boolean;
   windowSize?: { width: number; height: number };
   queue?: QueueState;
@@ -357,6 +358,26 @@ ipcMain.handle('get-stored-muted', (_: any) => {
 
 ipcMain.handle('save-muted', (_: any, muted: boolean) => {
   store.set('muted', Boolean(muted));
+});
+
+ipcMain.handle('get-stored-captions', (_: any) => {
+  return store.get('captionsEnabled') ?? false;
+});
+
+ipcMain.handle('save-captions', (_: any, enabled: boolean) => {
+  store.set('captionsEnabled', Boolean(enabled));
+});
+
+ipcMain.handle('get-always-on-top', (_: any) => {
+  return getAlwaysOnTopPreference();
+});
+
+ipcMain.handle('set-always-on-top', (_: any, enabled: boolean) => {
+  setAlwaysOnTopPreference(Boolean(enabled));
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFullScreen()) {
+    applyFloatingPiPSettings(mainWindow);
+  }
+  return getAlwaysOnTopPreference();
 });
 
 ipcMain.handle('has-seen-onboarding', (_: any) => {

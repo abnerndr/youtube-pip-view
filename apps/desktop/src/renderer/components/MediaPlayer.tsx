@@ -1,4 +1,4 @@
-import { Maximize, Minimize2, Minus, X } from "lucide-react";
+import { Maximize, Minimize2, Minus, Pin, PinOff, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { PlayerFacade, PlayerLoadError } from "../player/types";
 import { createPlayerFor } from "../player/create";
@@ -31,6 +31,7 @@ export function MediaPlayer({
   title,
 }: MediaPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const [facade, setFacade] = useState<PlayerFacade | null>(null);
   const mountRef = useRef<HTMLDivElement>(null);
   const facadeRef = useRef<PlayerFacade | null>(null);
@@ -46,6 +47,19 @@ export function MediaPlayer({
   const callbacksRef = useRef({ onPlayerReady, onPlaybackStarted, onError });
   callbacksRef.current = { onPlayerReady, onPlaybackStarted, onError };
 
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI
+      ?.getAlwaysOnTop?.()
+      .then((pinned) => {
+        if (!cancelled) setAlwaysOnTop(pinned);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // O player nasce já com o vídeo (um embed vazio fica preso em BUFFERING) e
   // é recriado quando o serviço muda: cada um tem seu próprio SDK.
   useEffect(() => {
@@ -53,7 +67,6 @@ export function MediaPlayer({
 
     const media = parseMediaKey(videoId);
     const sameProvider = providerRef.current === media.provider;
-
 
     if (facadeRef.current && sameProvider) return;
     if (creatingRef.current && sameProvider) return;
@@ -134,6 +147,16 @@ export function MediaPlayer({
     }
   };
 
+  const handleTogglePin = async () => {
+    if (!window.electronAPI?.setAlwaysOnTop) return;
+    try {
+      const next = await window.electronAPI.setAlwaysOnTop(!alwaysOnTop);
+      setAlwaysOnTop(next);
+    } catch (error) {
+      console.error("Erro ao alternar destacar:", error);
+    }
+  };
+
   const handleToggleFullscreen = async () => {
     if (!window.electronAPI?.toggleFullscreen) return;
     try {
@@ -149,6 +172,20 @@ export function MediaPlayer({
 
   const windowButtons = (
     <div className="window-buttons">
+      <button
+        type="button"
+        className={`window-button ${alwaysOnTop ? "active" : ""}`}
+        onClick={handleTogglePin}
+        title={alwaysOnTop ? strings.player.unpinHint : strings.player.pinHint}
+        aria-label={alwaysOnTop ? strings.player.unpin : strings.player.pin}
+        aria-pressed={alwaysOnTop}
+      >
+        {alwaysOnTop ? (
+          <Pin size={16} aria-hidden="true" />
+        ) : (
+          <PinOff size={16} aria-hidden="true" />
+        )}
+      </button>
       <button
         type="button"
         className="window-button"

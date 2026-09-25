@@ -171,6 +171,15 @@ export async function createVimeoPlayer({
     setCaptionsEnabled() {
       /* o SDK exige escolher a faixa por idioma; fora do escopo */
     },
+    isLive: () => false,
+    seekToLive() {
+      /* Vimeo VOD */
+    },
+    getAvailableQualityLevels: () => [],
+    getPlaybackQuality: () => "auto",
+    setPlaybackQuality() {
+      /* não suportado */
+    },
     getVideoTitle: () => title,
     onProgress(callback) {
       progressListeners.push(callback);

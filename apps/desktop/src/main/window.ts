@@ -11,7 +11,17 @@ const __dirname = path.dirname(__filename);
 const store = new Store<{
   windowSize?: { width: number; height: number };
   windowPosition?: { x: number; y: number };
+  alwaysOnTop?: boolean;
 }>();
+
+/** Preferência de “destacar” (always-on-top). Default: ligado. */
+export function getAlwaysOnTopPreference(): boolean {
+  return store.get("alwaysOnTop") ?? true;
+}
+
+export function setAlwaysOnTopPreference(enabled: boolean): void {
+  store.set("alwaysOnTop", Boolean(enabled));
+}
 
 export async function createWindow(): Promise<
   InstanceType<typeof BrowserWindow>
@@ -50,10 +60,12 @@ export async function createWindow(): Promise<
     movable: true,
     fullscreenable: true,
     skipTaskbar,
-    alwaysOnTop: true,
+    alwaysOnTop: getAlwaysOnTopPreference(),
     // NSPanel só existe no macOS; em Win/Linux a janela frameless padrão basta.
     ...(isMac ? { type: "panel" as const } : {}),
-    backgroundColor: "#000000",
+    // Windows 11: cantos nativos quando a janela não é totalmente custom.
+    ...(process.platform === "win32" ? { roundedCorners: true } : {}),
+    backgroundColor: "#00000000",
     show: false, // Não mostrar até estar pronto
     webPreferences: {
       preload: preloadPath,
@@ -153,15 +165,31 @@ export async function createQueueWindow(): Promise<
   return win;
 }
 
-/** Aplica always-on-top e visibilidade entre workspaces em qualquer SO. */
+/**
+ * Aplica (ou remove) always-on-top conforme a preferência do usuário.
+ * No Windows usamos "floating" — "screen-saver" era agressivo demais e
+ * impedia colocar a janela em segundo plano.
+ */
 export function applyFloatingPiPSettings(
   win: InstanceType<typeof BrowserWindow>
 ): void {
+  if (win.isDestroyed()) return;
+
+  const pinned = getAlwaysOnTopPreference();
+
+  if (!pinned) {
+    win.setAlwaysOnTop(false);
+    if (process.platform === "darwin") {
+      win.setVisibleOnAllWorkspaces(false);
+    }
+    return;
+  }
+
   if (process.platform === "darwin") {
     win.setAlwaysOnTop(true, "floating");
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   } else {
-    win.setAlwaysOnTop(true, "screen-saver");
+    win.setAlwaysOnTop(true, "floating");
     win.setVisibleOnAllWorkspaces(true);
   }
 }

@@ -9,7 +9,7 @@ import { PLAYER_STATE } from "./player/types";
 import type { PlayerFacade, PlayerLoadError } from "./player/types";
 import "./styles/app.css";
 
-const CONTROLS_HIDE_DELAY = 2500;
+const CONTROLS_HIDE_DELAY = 5000;
 
 export function App() {
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -235,7 +235,7 @@ export function App() {
     window.electronAPI?.saveMuted(muted);
   }, [player]);
 
-  // ===== Controles: aparecer com o mouse, sem sumir sob o cursor =====
+  // ===== Controles: aparecer com o mouse, sumir após 5s idle / blur =====
 
   useEffect(() => {
     let hideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -271,11 +271,28 @@ export function App() {
       scheduleHide();
     };
 
+    const handleBlur = () => {
+      // Clicou fora do PiP: agenda o hide sem depender do mouse.
+      if (hideTimeout) clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => {
+        setShowControls(false);
+      }, CONTROLS_HIDE_DELAY);
+    };
+
+    const handleFocus = () => {
+      setShowControls(true);
+      scheduleHide();
+    };
+
     document.addEventListener("mousemove", handleMouseMove, true);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
     scheduleHide();
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove, true);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
       if (hideTimeout) clearTimeout(hideTimeout);
     };
   }, []);

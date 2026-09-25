@@ -186,6 +186,15 @@ export async function createTwitchPlayer({
     setCaptionsEnabled() {
       /* o Twitch não expõe legendas por API */
     },
+    isLive: () => isLive,
+    seekToLive() {
+      /* canal ao vivo já está no edge */
+    },
+    getAvailableQualityLevels: () => [],
+    getPlaybackQuality: () => "auto",
+    setPlaybackQuality() {
+      /* não suportado */
+    },
     getVideoTitle: () => safe(() => player.getChannel(), "") || "",
     onProgress(callback) {
       progressListeners.push(callback);

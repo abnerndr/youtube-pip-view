@@ -1,6 +1,6 @@
 {
   "name": "@ytview/desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YouTube Picture-in-Picture desktop app for macOS, Windows and Linux",
   "author": "YTView contributors",
   "private": true,

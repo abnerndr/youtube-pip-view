@@ -25,6 +25,8 @@ export interface PlayerCapabilities {
   /** Só o YouTube expõe velocidade e legendas por API. */
   speed: boolean;
   captions: boolean;
+  /** Qualidade/resolução via IFrame API (YouTube). */
+  quality?: boolean;
   /**
    * O serviço não abre uma API de controle (Dailymotion): o vídeo é operado
    * pelos botões do próprio player, e a barra do YTView sai da frente.
@@ -62,6 +64,13 @@ export interface PlayerFacade {
   getPlaybackRate(): number;
   getAvailablePlaybackRates(): number[];
   setCaptionsEnabled(enabled: boolean): void;
+  /** Live YouTube/Twitch: true enquanto a transmissão estiver ao vivo. */
+  isLive(): boolean;
+  /** Sincroniza com o edge da live (equivalente ao botão AO VIVO do YouTube). */
+  seekToLive(): void;
+  getAvailableQualityLevels(): string[];
+  getPlaybackQuality(): string;
+  setPlaybackQuality(quality: string): void;
   getVideoTitle(): string;
   onProgress(callback: (progress: PlayerProgress) => void): () => void;
   onStateChange(callback: (state: number) => void): () => void;
